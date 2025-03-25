@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"project/config"
+	"project/internal/repositories"
 	"project/internal/server"
 	"time"
 
@@ -30,7 +31,10 @@ func main() {
 
 	log.Println("MongoDB connection success")
 
-	srv := server.New(cfg, client)
+	//create mongo store here
+	mongoStore := repositories.NewMongoSessionStore(client, cfg.MongoDbName, "sessions")
+
+	srv := server.New(cfg, client, mongoStore)
 	if err := srv.Run(); err != nil {
 		log.Fatal(err)
 	}

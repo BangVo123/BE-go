@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"project/config"
+	"project/internal/repositories"
 	"syscall"
 	"time"
 
@@ -19,22 +20,23 @@ import (
 )
 
 type Server struct {
-	gin *gin.Engine
-	cfg *config.Configuration
-	db  *mongo.Client
+	gin        *gin.Engine
+	cfg        *config.Configuration
+	db         *mongo.Client
+	MongoStore *repositories.MongoSessionStore
 }
 
-func New(cfg *config.Configuration, db *mongo.Client) *Server {
-	return &Server{gin: gin.New(), cfg: cfg, db: db}
+func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.MongoSessionStore) *Server {
+	return &Server{gin: gin.New(), cfg: cfg, db: db, MongoStore: MongoStore}
 }
 
 func (s *Server) Run() error {
 	//use middleware here
 
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3000"}
+	config.AllowOrigins = []string{s.cfg.ClientUrl}
 	config.AllowCredentials = true
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type"}
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	s.gin.Use(cors.New(config))
 
@@ -54,7 +56,7 @@ func (s *Server) Run() error {
 		google.New(s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL, "email", "profile"),
 	)
 
-	s.Handler(s.gin)
+	s.Handler(s.gin, *s.MongoStore)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

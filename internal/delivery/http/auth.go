@@ -1,12 +1,12 @@
 package http
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"project/config"
-	auth "project/internal/handlers"
+	"project/internal/handlers"
 	"project/internal/presenter"
+	"project/internal/repositories"
 	"project/internal/usecase"
 	"project/utils"
 
@@ -16,12 +16,13 @@ import (
 )
 
 type AuthHandler struct {
-	UserCase usecase.UserCase
-	cfg      *config.Configuration
+	UserCase   usecase.UserCase
+	cfg        *config.Configuration
+	MongoStore *repositories.MongoSessionStore
 }
 
-func NewAuthHandler(userCase usecase.UserCase, config *config.Configuration) auth.Handler {
-	return &AuthHandler{UserCase: userCase, cfg: config}
+func NewAuthHandler(userCase usecase.UserCase, config *config.Configuration, mongoStore *repositories.MongoSessionStore) handlers.AuthHandler {
+	return &AuthHandler{UserCase: userCase, cfg: config, MongoStore: mongoStore}
 }
 
 func (ah *AuthHandler) Login() gin.HandlerFunc {
@@ -40,7 +41,7 @@ func (ah *AuthHandler) Login() gin.HandlerFunc {
 		}
 
 		Payload := map[string]string{
-			"id":    user.ID.Hex(),
+			"id":    user.Id.Hex(),
 			"email": user.Email,
 		}
 
@@ -49,8 +50,7 @@ func (ah *AuthHandler) Login() gin.HandlerFunc {
 			c.JSON(404, gin.H{"error2": err.Error()})
 		}
 
-		c.SetCookie("jwt", token, 86400, "/", "", false, true)
-		c.JSON(http.StatusOK, gin.H{"message": "Login success"})
+		c.JSON(http.StatusOK, gin.H{"message": "Login success", "metadata": map[string]any{"token": token}})
 	}
 }
 
@@ -78,24 +78,17 @@ func (ah *AuthHandler) GoogleOauthCallback() gin.HandlerFunc {
 			return
 		}
 
-		fmt.Println(user)
-
-		// Example: Print user info or store in session/db
-		// log.Println("User:", user.Name, user.Email, user.UserID)
-		//call check user func
-
 		provider := ctx.Param("provider")
 		filter := map[string]any{
 			"email":    user.Email,
 			"provider": provider,
 		}
 
-		// fmt.Println(user.Email, " - ", provider)
-
 		FoundUser, err := ah.UserCase.CheckUserExist(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				//signup
+				//signup handler here
+
 				ctx.JSON(http.StatusBadRequest, "Signup")
 				return
 
@@ -105,22 +98,14 @@ func (ah *AuthHandler) GoogleOauthCallback() gin.HandlerFunc {
 			}
 		}
 
-		fmt.Print(FoundUser)
+		sessionId, err := ah.MongoStore.Save(FoundUser.Id.Hex())
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, "Something went wrong")
+			return
+		}
 
-		// Payload := map[string]string{
-		// 	"id":    FoundUser.ID.Hex(),
-		// 	"email": FoundUser.Email,
-		// }
+		ctx.SetCookie("cookie", sessionId, 86400, "/", "", false, true)
 
-		// token, err := utils.GenToken(Payload, ah.cfg.JWTAccessTokenSecret)
-		// if err != nil {
-		// 	ctx.JSON(http.StatusBadRequest, "Token creation error")
-		// 	return
-		// }
-		// ctx.SetCookie("jwt", token, 86400, "/", "", false, true)
-
-		// Redirect to frontend after success
-		// ctx.JSON(http.StatusOK, "Login Success")
 		ctx.Redirect(http.StatusTemporaryRedirect, ah.cfg.ClientUrl)
 	}
 }

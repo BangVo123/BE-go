@@ -3,6 +3,7 @@ package server
 import (
 	"project/config"
 	"project/internal/delivery/http"
+	"project/internal/middlewares"
 	"project/internal/repositories"
 	"project/internal/services"
 	"project/routers"
@@ -10,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s *Server) Handler(g *gin.Engine) {
+func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStore) {
 	db := s.db.Database(s.cfg.MongoDbName)
 	cfg := config.NewConfig()
 
@@ -18,11 +19,12 @@ func (s *Server) Handler(g *gin.Engine) {
 
 	AuthService := services.NewAuthService(*AuthRepo)
 
-	AuthHandler := http.NewAuthHandler(AuthService, cfg)
+	AuthHandler := http.NewAuthHandler(AuthService, cfg, &mongoStore)
+	mw := middlewares.NewMiddlewareManager(AuthService, s.cfg, s.MongoStore)
 
 	v1 := g.Group("/api/v1")
 	authGroup := v1.Group("/auth")
 
-	routers.MapAuthRoute(authGroup, AuthHandler)
+	routers.MapAuthRoute(authGroup, AuthHandler, mw)
 
 }

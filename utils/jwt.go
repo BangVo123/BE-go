@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"project/internal/presenter"
+	"time"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -11,7 +12,7 @@ func GenToken(payload map[string]string, secret string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":    payload["_id"],
 		"email": payload["email"],
-		// "exp":   time.Now().Add(24 * time.Hour).Unix(),
+		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(secret))

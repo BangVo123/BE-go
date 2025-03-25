@@ -26,19 +26,6 @@ func (ah *AuthService) Login(ctx context.Context, creds presenter.LoginReq) (*mo
 		return nil, err
 	}
 
-	// v := reflect.ValueOf(FoundUser)
-	// // Make sure we're dealing with a struct
-	// if v.Kind() == reflect.Ptr {
-	// 	v = v.Elem()
-	// }
-	// t := v.Type()
-
-	// for i := 0; i < v.NumField(); i++ {
-	// 	field := t.Field(i)
-	// 	value := v.Field(i).Interface()
-	// 	fmt.Printf("%s: %v\n", field.Name, value)
-	// }
-
 	isTrue := FoundUser.ComparePassword(Password)
 	if !isTrue {
 		return nil, errors.New("Username or password does not match")

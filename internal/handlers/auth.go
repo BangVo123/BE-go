@@ -1,8 +1,8 @@
-package auth
+package handlers
 
 import "github.com/gin-gonic/gin"
 
-type Handler interface {
+type AuthHandler interface {
 	Login() gin.HandlerFunc
 	SignUp() gin.HandlerFunc
 	GoogleOauth() gin.HandlerFunc
