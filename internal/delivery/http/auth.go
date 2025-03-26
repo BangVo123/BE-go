@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"project/config"
 	"project/internal/handlers"
+	"project/internal/models"
 	"project/internal/presenter"
 	"project/internal/repositories"
 	"project/internal/usecase"
@@ -25,87 +26,109 @@ func NewAuthHandler(userCase usecase.UserCase, config *config.Configuration, mon
 	return &AuthHandler{UserCase: userCase, cfg: config, MongoStore: mongoStore}
 }
 
-func (ah *AuthHandler) Login() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		creds := presenter.LoginReq{}
-		err := utils.ReadRequest(c, &creds)
-		if err != nil {
-			c.JSON(404, gin.H{"error0": err.Error()})
-			return
-		}
-
-		user, err := ah.UserCase.Login(c.Request.Context(), creds)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error1": err.Error()})
-			return
-		}
-
-		Payload := map[string]string{
-			"id":    user.Id.Hex(),
-			"email": user.Email,
-		}
-
-		token, err := utils.GenToken(Payload, ah.cfg.JWTAccessTokenSecret)
-		if err != nil {
-			c.JSON(404, gin.H{"error2": err.Error()})
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Login success", "metadata": map[string]any{"token": token}})
+func (ah *AuthHandler) Login(c *gin.Context) {
+	creds := presenter.LoginReq{}
+	err := utils.ReadRequest(c, &creds)
+	if err != nil {
+		c.JSON(404, gin.H{"error0": err.Error()})
+		return
 	}
-}
 
-func (ah *AuthHandler) SignUp() gin.HandlerFunc {
-	return func(c *gin.Context) {}
-}
-
-func (ah *AuthHandler) GoogleOauth() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		provider := ctx.Param("provider")
-		q := ctx.Request.URL.Query()
-		q.Set("provider", provider)
-		ctx.Request.URL.RawQuery = q.Encode()
-
-		gothic.BeginAuthHandler(ctx.Writer, ctx.Request)
+	user, err := ah.UserCase.Login(c.Request.Context(), creds)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error1": err.Error()})
+		return
 	}
+
+	Payload := map[string]string{
+		"id":    user.Id.Hex(),
+		"email": user.Email,
+	}
+
+	token, err := utils.GenToken(Payload, ah.cfg.JWTAccessTokenSecret)
+	if err != nil {
+		c.JSON(404, gin.H{"error2": err.Error()})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Login success", "metadata": map[string]any{"token": token}})
 }
 
-func (ah *AuthHandler) GoogleOauthCallback() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		user, err := gothic.CompleteUserAuth(ctx.Writer, ctx.Request)
-		if err != nil {
-			log.Println("OAuth error:", err)
-			ctx.JSON(http.StatusTemporaryRedirect, "Login fail")
-			return
-		}
+func (ah *AuthHandler) SignUp(c *gin.Context) {
+}
 
-		provider := ctx.Param("provider")
-		filter := map[string]any{
-			"email":    user.Email,
-			"provider": provider,
-		}
+func (ah *AuthHandler) GoogleOauth(c *gin.Context) {
+	provider := c.Param("provider")
+	q := c.Request.URL.Query()
+	q.Set("provider", provider)
+	c.Request.URL.RawQuery = q.Encode()
 
-		FoundUser, err := ah.UserCase.CheckUserExist(ctx, filter)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				//signup handler here
+	gothic.BeginAuthHandler(c.Writer, c.Request)
+}
 
-				ctx.JSON(http.StatusBadRequest, "Signup")
-				return
+func (ah *AuthHandler) GoogleOauthCallback(c *gin.Context) {
+	user, err := gothic.CompleteUserAuth(c.Writer, c.Request)
+	if err != nil {
+		log.Println("OAuth error:", err)
+		c.JSON(http.StatusTemporaryRedirect, "Login fail")
+		return
+	}
 
-			} else {
-				ctx.JSON(http.StatusBadRequest, "Something went wrong")
+	provider := c.Param("provider")
+	filter := map[string]any{
+		"email":    user.Email,
+		"provider": provider,
+	}
+
+	FoundUser, err := ah.UserCase.GetUserExist(c.Request.Context(), filter)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			//signup handler
+			payload := models.User{
+				Email:    user.Email,
+				FullName: user.Name,
+				NickName: user.NickName,
+				Provider: user.Provider,
+				Avatar:   user.AvatarURL,
+			}
+			FoundUser, err = ah.UserCase.CreateUser(c.Request.Context(), &payload)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, "Signup")
 				return
 			}
-		}
 
-		sessionId, err := ah.MongoStore.Save(FoundUser.Id.Hex())
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, "Something went wrong")
+		} else {
+			c.JSON(http.StatusBadRequest, "Something went wrong")
 			return
 		}
-
-		ctx.SetCookie("cookie", sessionId, 86400, "/", "", false, true)
-
-		ctx.Redirect(http.StatusTemporaryRedirect, ah.cfg.ClientUrl)
 	}
+
+	sessionId, err := ah.MongoStore.Save(FoundUser.Id.Hex())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	c.SetCookie("cookie", sessionId, 86400, "/", "", false, true)
+	gothic.Logout(c.Writer, c.Request)
+
+	c.Redirect(http.StatusTemporaryRedirect, ah.cfg.ClientUrl)
+}
+
+func (ah *AuthHandler) Logout(c *gin.Context) {
+	if _, err := c.Cookie("cookie"); err == nil {
+		c.SetCookie("cookie", "", -1, "/", "", false, true)
+	}
+
+	c.JSON(http.StatusOK, "Logout success")
+}
+
+func (ah *AuthHandler) GetMe(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusForbidden, "User not authenticate")
+		return
+	}
+
+	foundUser := user.(models.User)
+	c.JSON(http.StatusOK, map[string]any{"data": map[string]any{"user": foundUser}})
 }

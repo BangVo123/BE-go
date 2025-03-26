@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"context"
 	"net/http"
 	"project/config"
 	"project/internal/repositories"
@@ -23,55 +22,55 @@ func NewMiddlewareManager(UserCase usecase.UserCase, cfg *config.Configuration, 
 	return &MiddlewareManager{UserCase: UserCase, cfg: cfg, MongoStore: MongoStore}
 }
 
-func (m *MiddlewareManager) Protect() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		cookie, err := c.Cookie("cookie")
-		if err != nil {
-			if err != http.ErrNoCookie {
-				c.JSON(http.StatusForbidden, "Access denied")
-				return
-			} else {
-				token := strings.Split(c.Request.Header["Authorization"][0], " ")[1]
-				if token == "" {
-					c.JSON(http.StatusForbidden, "Access denied")
-					return
-				}
-
-				tokenClaims, err := utils.VerifyToken(token, m.cfg.JWTAccessTokenSecret)
-				if err != nil {
-					c.JSON(http.StatusForbidden, "Authentication fail")
-					return
-				}
-
-				Expired := time.Unix(tokenClaims.Expired, 0)
-				if time.Now().After(Expired) {
-					c.JSON(http.StatusForbidden, "Authentication fail")
-					return
-				}
-
-				FoundUser, err := m.UserCase.CheckUserExist(context.TODO(), map[string]any{"_id": tokenClaims.Id})
-				if err != nil {
-					c.JSON(http.StatusForbidden, "Authentication fail")
-					return
-				}
-				c.Set("user", FoundUser)
-			}
+func (m *MiddlewareManager) Protect(c *gin.Context) {
+	cookie, err := c.Cookie("cookie")
+	if err != nil {
+		if err != http.ErrNoCookie {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied"})
+			return
 		} else {
-			// fmt.Print(cookie)
-			userId, err := m.MongoStore.Load(cookie)
-			if err != nil {
-				c.JSON(http.StatusForbidden, "Authentication fail")
+			tokenString := c.GetHeader("Authorization")
+			if tokenString == "" {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied"})
 				return
 			}
 
-			FoundUser, err := m.UserCase.CheckUserExist(context.TODO(), map[string]any{"_id": userId})
+			token := strings.Split(tokenString, " ")[1]
+
+			tokenClaims, err := utils.VerifyToken(token, m.cfg.JWTAccessTokenSecret)
 			if err != nil {
-				c.JSON(http.StatusForbidden, "Authentication fail")
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authentication fail"})
+				return
+			}
+
+			Expired := time.Unix(tokenClaims.Expired, 0)
+			if time.Now().After(Expired) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authentication fail"})
+				return
+			}
+
+			FoundUser, err := m.UserCase.GetUserExist(c.Request.Context(), map[string]any{"_id": tokenClaims.Id, "provider": nil})
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authentication fail"})
 				return
 			}
 			c.Set("user", FoundUser)
 		}
+	} else {
+		// fmt.Print(cookie)
+		userId, err := m.MongoStore.Load(cookie)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access Denied"})
+			return
+		}
 
-		c.Next()
+		FoundUser, err := m.UserCase.GetUserById(c.Request.Context(), userId)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			return
+		}
+		c.Set("user", *FoundUser)
 	}
+
+	c.Next()
 }

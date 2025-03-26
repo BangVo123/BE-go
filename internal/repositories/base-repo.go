@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"strconv"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -104,17 +103,11 @@ func (r *BaseRepository[T]) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *BaseRepository[T]) GetMany(ctx context.Context, filter map[string]any, pagination map[string]string) (*[]T, error) {
+func (r *BaseRepository[T]) GetMany(ctx context.Context, filter map[string]any, pagination map[string]int64) (*[]T, error) {
 	Collection := r.DB.Collection(r.CollectionName)
 
-	page, err := strconv.ParseInt(pagination["page"], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	limit, err := strconv.ParseInt(pagination["limit"], 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	page := pagination["page"]
+	limit := pagination["limit"]
 	offset := (page - 1) * limit
 
 	findOptions := options.Find().SetLimit(limit).SetSkip(offset)
@@ -131,17 +124,11 @@ func (r *BaseRepository[T]) GetMany(ctx context.Context, filter map[string]any, 
 	return &entities, nil
 }
 
-func (r *BaseRepository[T]) GetAll(ctx context.Context, pagination map[string]string) (*[]T, error) {
+func (r *BaseRepository[T]) GetAll(ctx context.Context, pagination map[string]int64) (*[]T, error) {
 	Collection := r.DB.Collection(r.CollectionName)
 
-	page, err := strconv.ParseInt(pagination["page"], 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	limit, err := strconv.ParseInt(pagination["limit"], 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	page := pagination["page"]
+	limit := pagination["limit"]
 	offset := (page - 1) * limit
 
 	findOptions := options.Find().SetLimit(limit).SetSkip(offset)

@@ -10,18 +10,18 @@ import (
 )
 
 type AuthService struct {
-	UserRepo repositories.UserRepo
+	UserRepo *repositories.UserRepo
 }
 
-func NewAuthService(userRepo repositories.UserRepo) usecase.UserCase {
+func NewAuthService(userRepo *repositories.UserRepo) usecase.UserCase {
 	return &AuthService{UserRepo: userRepo}
 }
 
-func (ah *AuthService) Login(ctx context.Context, creds presenter.LoginReq) (*models.User, error) {
+func (as *AuthService) Login(ctx context.Context, creds presenter.LoginReq) (*models.User, error) {
 	Username := creds.Username
 	Password := creds.Password
 
-	FoundUser, err := ah.UserRepo.GetByField(ctx, "email", Username)
+	FoundUser, err := as.UserRepo.GetByField(ctx, "email", Username)
 	if err != nil {
 		return nil, err
 	}
@@ -34,12 +34,12 @@ func (ah *AuthService) Login(ctx context.Context, creds presenter.LoginReq) (*mo
 	return FoundUser, nil
 }
 
-func (ah *AuthService) SignUp(ctx context.Context, creds presenter.RegisterReq) (*models.User, error) {
+func (as *AuthService) SignUp(ctx context.Context, creds presenter.RegisterReq) (*models.User, error) {
 	//code for test
 	Username := creds.Username
 	Password := creds.Password
 
-	FoundUser, err := ah.UserRepo.GetByField(ctx, "email", Username)
+	FoundUser, err := as.UserRepo.GetByField(ctx, "email", Username)
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +52,19 @@ func (ah *AuthService) SignUp(ctx context.Context, creds presenter.RegisterReq) 
 	return FoundUser, nil
 }
 
-func (ah *AuthService) CheckUserExist(ctx context.Context, filter map[string]any) (*models.User, error) {
-	FoundUser, err := ah.UserRepo.GetByFilter(ctx, filter)
+func (as *AuthService) GetUserExist(ctx context.Context, filter map[string]any) (*models.User, error) {
+	FoundUser, err := as.UserRepo.GetByFilter(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	return FoundUser, nil
+}
+
+func (as *AuthService) CreateUser(ctx context.Context, payload *models.User) (*models.User, error) {
+	return as.CreateUser(ctx, payload)
+}
+
+func (as *AuthService) GetUserById(ctx context.Context, userId string) (*models.User, error) {
+	return as.UserRepo.GetById(ctx, userId)
 }

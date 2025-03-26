@@ -31,13 +31,16 @@ func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.M
 }
 
 func (s *Server) Run() error {
-	//use middleware here
+	s.gin.OPTIONS("/*cors", func(c *gin.Context) {
+		c.AbortWithStatus(204)
+	})
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{s.cfg.ClientUrl}
 	config.AllowCredentials = true
-	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	config.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Accept", "Authorization"}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	config.ExposeHeaders = []string{"Content-Length"}
 	s.gin.Use(cors.New(config))
 
 	srv := http.Server{
