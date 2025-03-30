@@ -31,9 +31,9 @@ func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.M
 }
 
 func (s *Server) Run() error {
-	s.gin.OPTIONS("/*cors", func(c *gin.Context) {
-		c.AbortWithStatus(204)
-	})
+	// s.gin.OPTIONS("/*cors", func(c *gin.Context) {
+	// 	c.AbortWithStatus(204)
+	// })
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{s.cfg.ClientUrl}

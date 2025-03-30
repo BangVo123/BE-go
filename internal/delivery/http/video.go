@@ -28,6 +28,5 @@ func (vh *VideoHandler) GetVideos(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, "Something went wrong")
 		return
 	}
-	c.JSON(http.StatusOK, map[string]any{"data": &videos})
-
+	c.JSON(http.StatusOK, map[string]any{"data": videos})
 }
