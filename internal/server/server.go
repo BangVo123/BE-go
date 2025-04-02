@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth"
@@ -24,10 +25,11 @@ type Server struct {
 	cfg        *config.Configuration
 	db         *mongo.Client
 	MongoStore *repositories.MongoSessionStore
+	cld        *cloudinary.Cloudinary
 }
 
-func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.MongoSessionStore) *Server {
-	return &Server{gin: gin.New(), cfg: cfg, db: db, MongoStore: MongoStore}
+func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.MongoSessionStore, cld *cloudinary.Cloudinary) *Server {
+	return &Server{gin: gin.New(), cfg: cfg, db: db, MongoStore: MongoStore, cld: cld}
 }
 
 func (s *Server) Run() error {
@@ -59,7 +61,7 @@ func (s *Server) Run() error {
 		google.New(s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL, "email", "profile"),
 	)
 
-	s.Handler(s.gin, *s.MongoStore)
+	s.Handler(s.gin, *s.MongoStore, *s.cld)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

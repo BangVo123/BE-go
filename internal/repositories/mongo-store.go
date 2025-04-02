@@ -24,8 +24,7 @@ func NewMongoSessionStore(client *mongo.Client, dbName, collectionName string) *
 	}
 }
 
-func (m *MongoSessionStore) Save(userId string) (string, error) {
-	ctx := context.TODO()
+func (m *MongoSessionStore) Save(ctx context.Context, userId string) (string, error) {
 	session, err := m.collection.InsertOne(ctx, bson.M{"user_id": userId})
 	if err != nil {
 		return "", err
@@ -38,13 +37,12 @@ func (m *MongoSessionStore) Save(userId string) (string, error) {
 	return oid.Hex(), nil
 }
 
-func (m *MongoSessionStore) Load(sessionId string) (string, error) {
+func (m *MongoSessionStore) Load(ctx context.Context, sessionId string) (string, error) {
 	ObjectId, err := primitive.ObjectIDFromHex(sessionId)
 	if err != nil {
 		return "", err
 	}
 
-	ctx := context.TODO()
 	var result Session
 	err = m.collection.FindOne(ctx, bson.M{"_id": ObjectId}).Decode(&result)
 	if err != nil {

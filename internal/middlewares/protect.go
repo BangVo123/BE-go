@@ -58,7 +58,7 @@ func (m *MiddlewareManager) Protect(c *gin.Context) {
 		}
 	} else {
 		// fmt.Print(cookie)
-		userId, err := m.MongoStore.Load(cookie)
+		userId, err := m.MongoStore.Load(c.Request.Context(), cookie)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access Denied"})
 			return

@@ -144,3 +144,33 @@ func (r *BaseRepository[T]) GetAll(ctx context.Context, pagination map[string]in
 	}
 	return &entities, nil
 }
+
+func (r *BaseRepository[T]) GetWithPopulation(ctx context.Context, pagination map[string]int64, pipelineValue map[string]any, unwindAttr string) (*[]T, error) {
+	Collection := r.DB.Collection(r.CollectionName)
+
+	page := pagination["page"]
+	limit := pagination["limit"]
+	offset := (page - 1) * limit
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$lookup", Value: pipelineValue}},
+		{{Key: "$skip", Value: offset}},
+		{{Key: "$limit", Value: limit}},
+	}
+
+	if unwindAttr != "" {
+		pipeline = append(pipeline, bson.D{{Key: "$unwind", Value: unwindAttr}})
+	}
+
+	cursor, err := Collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var entities []T
+	if err := cursor.All(ctx, &entities); err != nil {
+		return nil, err
+	}
+	return &entities, nil
+}

@@ -4,5 +4,9 @@ import "github.com/gin-gonic/gin"
 
 type VideoHandler interface {
 	GetVideos(c *gin.Context)
-	// GetVideos() gin.HandlerFunc
+	AddVideo(c *gin.Context)
+}
+
+type VideoWithOwnerInfoHandler interface {
+	GetVideos(c *gin.Context)
 }

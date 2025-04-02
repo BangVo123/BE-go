@@ -27,6 +27,17 @@ type User struct {
 	InstagramUrl    string             `bson:"instagram_URL" json:"instagram_URL"`
 }
 
+type UserSummary struct {
+	Id             primitive.ObjectID `bson:"_id" json:"_id"`
+	FullName       string             `bson:"full_name" json:"full_name"`
+	NickName       string             `bson:"nick_name" json:"nick_name"`
+	Avatar         string             `bson:"avatar" json:"avatar"`
+	Bio            string             `bson:"bio" json:"bio"`
+	Tick           bool               `bson:"tick" json:"tick"`
+	FollowerCounts int                `bson:"followers_count" json:"followers_count"`
+	LikeCounts     int                `bson:"likes_count" json:"likes_count"`
+}
+
 func (us *User) HashPassword() error {
 	hashPassword, err := bcrypt.GenerateFromPassword([]byte(us.Password), 10)
 

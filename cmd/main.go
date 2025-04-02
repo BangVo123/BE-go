@@ -8,6 +8,7 @@ import (
 	"project/internal/server"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -17,7 +18,7 @@ func main() {
 
 	log.Println("url: ", cfg.MongoDbURL)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	client, error := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoDbURL))
@@ -34,7 +35,13 @@ func main() {
 	//create mongo store here
 	mongoStore := repositories.NewMongoSessionStore(client, cfg.MongoDbName, "sessions")
 
-	srv := server.New(cfg, client, mongoStore)
+	//create connection to cloudinary
+	cld, error := cloudinary.NewFromParams(cfg.CloudinaryCloudName, cfg.CloudinaryCloudAPIKey, cfg.CloudinaryCloudAPISecret)
+	if error != nil {
+		log.Fatal("Cloudinary connection error: ", error)
+	}
+
+	srv := server.New(cfg, client, mongoStore, cld)
 	if err := srv.Run(); err != nil {
 		log.Fatal(err)
 	}

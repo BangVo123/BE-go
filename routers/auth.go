@@ -11,5 +11,5 @@ func MapAuthRoute(authGroup *gin.RouterGroup, h handlers.AuthHandler, mw *middle
 	authGroup.POST("/login", h.Login)
 	authGroup.GET("/:provider", h.GoogleOauth)
 	authGroup.GET("/:provider/callback", h.GoogleOauthCallback)
-	authGroup.POST("/logout", mw.Protect, h.Logout)
+	authGroup.GET("/logout", mw.Protect, h.Logout)
 }

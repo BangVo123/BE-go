@@ -12,4 +12,5 @@ type GenericRepository[T any] interface {
 	Delete(ctx context.Context, id string) error
 	GetMany(ctx context.Context, filter map[string]any, pagination map[string]int64) (*[]T, error)
 	GetAll(ctx context.Context, pagination map[string]int64) (*[]T, error)
+	GetWithPopulation(ctx context.Context, pagination map[string]int64, pipelineValue map[string]any, unwindAttr string) (*[]T, error)
 }

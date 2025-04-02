@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"project/config"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/markbates/goth/gothic"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -84,6 +86,7 @@ func (ah *AuthHandler) GoogleOauthCallback(c *gin.Context) {
 		if err == mongo.ErrNoDocuments {
 			//signup handler
 			payload := models.User{
+				Id:       primitive.NewObjectID(),
 				Email:    user.Email,
 				FullName: user.Name,
 				NickName: user.NickName,
@@ -102,7 +105,7 @@ func (ah *AuthHandler) GoogleOauthCallback(c *gin.Context) {
 		}
 	}
 
-	sessionId, err := ah.MongoStore.Save(FoundUser.Id.Hex())
+	sessionId, err := ah.MongoStore.Save(c.Request.Context(), FoundUser.Id.Hex())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Something went wrong")
 		return
@@ -115,10 +118,10 @@ func (ah *AuthHandler) GoogleOauthCallback(c *gin.Context) {
 }
 
 func (ah *AuthHandler) Logout(c *gin.Context) {
+	fmt.Print("test")
 	if _, err := c.Cookie("cookie"); err == nil {
 		c.SetCookie("cookie", "", -1, "/", "", false, true)
 	}
-
 	c.JSON(http.StatusOK, "Logout success")
 }
 
@@ -131,4 +134,15 @@ func (ah *AuthHandler) GetMe(c *gin.Context) {
 
 	foundUser := user.(models.User)
 	c.JSON(http.StatusOK, map[string]any{"data": map[string]any{"user": foundUser}})
+}
+
+func (ah *AuthHandler) GetUserInfo(c *gin.Context) {
+	userIdString := c.Param("userId")
+
+	FoundUser, err := ah.UserCase.GetUserById(c.Request.Context(), userIdString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, "Something went wrong when get userinfo")
+	}
+
+	c.JSON(http.StatusOK, map[string]any{"data": FoundUser})
 }

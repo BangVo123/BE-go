@@ -7,21 +7,26 @@ import (
 	"project/internal/services"
 	"project/routers"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/gin-gonic/gin"
 )
 
-func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStore) {
+func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStore, cld cloudinary.Cloudinary) {
 	db := s.db.Database(s.cfg.MongoDbName)
 
 	AuthRepo := repositories.NewUserRepo(db, "users")
-	VideoRepo := repositories.NewVideoRepo(db, "videos")
+	// VideoRepo := repositories.NewVideoRepo(db, "videos")
+	VideoWithOwnerInfoRepo := repositories.NewVideoWithOwnerInfoRepo(db, "videos")
 
 	AuthService := services.NewAuthService(AuthRepo)
-	VideoService := services.NewVideoService(VideoRepo)
+	// VideoService := services.NewVideoService(VideoRepo)
+	VideoWithOwnerInfoService := services.NewVideoWithOwnerInfoService(VideoWithOwnerInfoRepo)
 
 	AuthHandler := http.NewAuthHandler(AuthService, s.cfg, &mongoStore)
 	UserHandler := http.NewAuthHandler(AuthService, s.cfg, &mongoStore)
-	VideoHandler := http.NewVideoHandler(VideoService)
+	// VideoHandler := http.NewVideoHandler(VideoService, cld)
+	VideoWithOwnerInfoHandler := http.NewVideoWithOwnerInfoHandler(VideoWithOwnerInfoService)
+	UploadHandler := http.NewUploadHandler(cld)
 
 	mw := middlewares.NewMiddlewareManager(AuthService, s.cfg, s.MongoStore)
 
@@ -29,9 +34,11 @@ func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStor
 	authGroup := v1.Group("/auth")
 	userGroup := v1.Group("/users")
 	videoGroup := v1.Group("/video")
+	uploadGroup := v1.Group("/upload")
 
 	routers.MapAuthRoute(authGroup, AuthHandler, mw)
 	routers.MapUserRoute(userGroup, UserHandler, mw)
-	routers.MapVideoRoute(videoGroup, VideoHandler, mw)
-
+	routers.MapVideoWithOwnerInfoRoute(videoGroup, VideoWithOwnerInfoHandler, mw)
+	// routers.MapVideoRoute(videoGroup, VideoHandler, mw)
+	routers.UploadRoute(uploadGroup, UploadHandler, mw)
 }
