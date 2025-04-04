@@ -8,6 +8,8 @@ type AuthHandler interface {
 	GoogleOauth(c *gin.Context)
 	GoogleOauthCallback(c *gin.Context)
 	Logout(c *gin.Context)
+	Forgot(c *gin.Context)
+	Reset(c *gin.Context)
 	GetMe(c *gin.Context)
 	GetUserInfo(c *gin.Context)
 }

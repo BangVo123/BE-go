@@ -18,6 +18,7 @@ import (
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/providers/google"
 	"go.mongodb.org/mongo-driver/mongo"
+	mail "gopkg.in/gomail.v2"
 )
 
 type Server struct {
@@ -33,10 +34,6 @@ func New(cfg *config.Configuration, db *mongo.Client, MongoStore *repositories.M
 }
 
 func (s *Server) Run() error {
-	// s.gin.OPTIONS("/*cors", func(c *gin.Context) {
-	// 	c.AbortWithStatus(204)
-	// })
-
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{s.cfg.ClientUrl}
 	config.AllowCredentials = true
@@ -61,7 +58,10 @@ func (s *Server) Run() error {
 		google.New(s.cfg.GoogleClientID, s.cfg.GoogleClientSecret, s.cfg.GoogleCallbackURL, "email", "profile"),
 	)
 
-	s.Handler(s.gin, *s.MongoStore, *s.cld)
+	//create SMTP connection
+	dialer := mail.NewDialer("smtp.gmail.com", 587, s.cfg.Email, s.cfg.EmailPassword)
+
+	s.Handler(s.gin, *s.MongoStore, *s.cld, dialer)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

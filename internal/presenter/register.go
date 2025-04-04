@@ -1,7 +1,7 @@
 package presenter
 
 type RegisterReq struct {
-	Username string `json:"username" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
+	Email    string `json:"username" validate:"required,email"`
 	Password string `json:"password" validate:"required"`
+	Code     string `json:"code" validate:"required"`
 }

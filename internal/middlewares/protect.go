@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"net/http"
 	"project/config"
 	"project/internal/repositories"
@@ -26,12 +27,12 @@ func (m *MiddlewareManager) Protect(c *gin.Context) {
 	cookie, err := c.Cookie("cookie")
 	if err != nil {
 		if err != http.ErrNoCookie {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied - Cookie invalid"})
 			return
 		} else {
 			tokenString := c.GetHeader("Authorization")
 			if tokenString == "" {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied"})
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error:": "Access denied - No token"})
 				return
 			}
 
@@ -45,19 +46,19 @@ func (m *MiddlewareManager) Protect(c *gin.Context) {
 
 			Expired := time.Unix(tokenClaims.Expired, 0)
 			if time.Now().After(Expired) {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authentication fail"})
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Token expired"})
 				return
 			}
 
-			FoundUser, err := m.UserCase.GetUserExist(c.Request.Context(), map[string]any{"_id": tokenClaims.Id, "provider": nil})
+			fmt.Println("id", tokenClaims.Id)
+			FoundUser, err := m.UserCase.GetUserById(c.Request.Context(), tokenClaims.Id)
 			if err != nil {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Authentication fail"})
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Err when get user info"})
 				return
 			}
-			c.Set("user", FoundUser)
+			c.Set("user", *FoundUser)
 		}
 	} else {
-		// fmt.Print(cookie)
 		userId, err := m.MongoStore.Load(c.Request.Context(), cookie)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access Denied"})
@@ -66,7 +67,7 @@ func (m *MiddlewareManager) Protect(c *gin.Context) {
 
 		FoundUser, err := m.UserCase.GetUserById(c.Request.Context(), userId)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Err when get user info"})
 			return
 		}
 		c.Set("user", *FoundUser)
