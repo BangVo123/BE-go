@@ -10,6 +10,6 @@ type AuthHandler interface {
 	Logout(c *gin.Context)
 	Forgot(c *gin.Context)
 	Reset(c *gin.Context)
-	GetMe(c *gin.Context)
-	GetUserInfo(c *gin.Context)
+	// GetMe(c *gin.Context)
+	// GetUserInfo(c *gin.Context)
 }

@@ -16,18 +16,28 @@ func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStor
 	db := s.db.Database(s.cfg.MongoDbName)
 
 	AuthRepo := repositories.NewUserRepo(db, "users")
-	// VideoRepo := repositories.NewVideoRepo(db, "videos")
+	VideoRepo := repositories.NewVideoRepo(db, "videos")
 	VideoWithOwnerInfoRepo := repositories.NewVideoWithOwnerInfoRepo(db, "videos")
 	CodeRepo := repositories.NewCodeRepo(db, "digitcodes")
+	FollowRepo := repositories.NewFollowerRepo(db, "followers")
+	FollowerRepo := repositories.NewFollowerInfoRepo(db, "followers")
+	FollowingRepo := repositories.NewFollowingInfoRepo(db, "followers")
+	LikeRepo := repositories.NewLikeRepo(db, "likes")
+	LoveRepo := repositories.NewLoveRepo(db, "loves")
 
 	AuthService := services.NewAuthService(AuthRepo)
-	// VideoService := services.NewVideoService(VideoRepo)
+	VideoService := services.NewVideoService(VideoRepo)
 	VideoWithOwnerInfoService := services.NewVideoWithOwnerInfoService(VideoWithOwnerInfoRepo)
 	CodeService := services.NewCodeService(CodeRepo)
+	FollowService := services.NewFollowService(FollowRepo)
+	FollowerService := services.NewFollowerInfoService(FollowerRepo)
+	FollowingService := services.NewFollowingInfoService(FollowingRepo)
+	LikeService := services.NewLikeService(LikeRepo)
+	LoveService := services.NewLoveService(LoveRepo)
 
 	AuthHandler := http.NewAuthHandler(AuthService, s.cfg, &mongoStore, CodeService, *dialer)
-	UserHandler := http.NewAuthHandler(AuthService, s.cfg, &mongoStore, CodeService, *dialer)
-	// VideoHandler := http.NewVideoHandler(VideoService, cld)
+	UserHandler := http.NewUserHandler(AuthService, FollowService, FollowerService, FollowingService, LikeService, LoveService)
+	VideoHandler := http.NewVideoHandler(VideoService, cld, LikeService, LoveService)
 	VideoWithOwnerInfoHandler := http.NewVideoWithOwnerInfoHandler(VideoWithOwnerInfoService)
 	UploadHandler := http.NewUploadHandler(cld)
 
@@ -42,7 +52,7 @@ func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStor
 	routers.MapAuthRoute(authGroup, AuthHandler, mw)
 	routers.MapUserRoute(userGroup, UserHandler, mw)
 	routers.MapVideoWithOwnerInfoRoute(videoGroup, VideoWithOwnerInfoHandler, mw)
-	// routers.MapVideoRoute(videoGroup, VideoHandler, mw)
+	routers.MapVideoRoute(videoGroup, VideoHandler, mw)
 	routers.UploadRoute(uploadGroup, UploadHandler, mw)
 
 }

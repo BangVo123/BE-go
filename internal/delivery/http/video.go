@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"net/http"
 	"project/internal/handlers"
 	"project/internal/models"
@@ -15,10 +14,12 @@ import (
 type VideoHandler struct {
 	VideoUseCase usecase.VideoUseCase
 	cld          cloudinary.Cloudinary
+	LikeUseCase  usecase.LikeUseCase
+	LoveUseCase  usecase.LoveUseCase
 }
 
-func NewVideoHandler(VideoUseCase usecase.VideoUseCase, cld cloudinary.Cloudinary) handlers.VideoHandler {
-	return &VideoHandler{VideoUseCase: VideoUseCase, cld: cld}
+func NewVideoHandler(VideoUseCase usecase.VideoUseCase, cld cloudinary.Cloudinary, LikeUseCase usecase.LikeUseCase, LoveUseCase usecase.LoveUseCase) handlers.VideoHandler {
+	return &VideoHandler{VideoUseCase: VideoUseCase, cld: cld, LikeUseCase: LikeUseCase, LoveUseCase: LoveUseCase}
 }
 
 // this func is a gin.HandlerFunc - has param *gin.Context
@@ -61,6 +62,52 @@ func (vh *VideoHandler) AddVideo(c *gin.Context) {
 	c.JSON(http.StatusOK, "Add video success")
 }
 
+func (vh *VideoHandler) Like(c *gin.Context) {
+	videoId := c.Param("videoId")
+	if videoId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Can not retrieve video id"})
+		return
+	}
+
+	user, _ := c.Get("user")
+	userModel, ok := (user).(models.User)
+	if !ok {
+		c.JSON(http.StatusBadRequest, "Something went wrong when extract userinfo")
+		return
+	}
+
+	err := vh.LikeUseCase.Like(c.Request.Context(), videoId, userModel.Id.Hex())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "error", "err": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Success"})
+}
+
+func (vh *VideoHandler) Love(c *gin.Context) {
+	videoId := c.Param("videoId")
+	if videoId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Can not retrieve video id"})
+		return
+	}
+
+	user, _ := c.Get("user")
+	userModel, ok := (user).(models.User)
+	if !ok {
+		c.JSON(http.StatusBadRequest, "Something went wrong when extract userinfo")
+		return
+	}
+
+	err := vh.LoveUseCase.Love(c.Request.Context(), videoId, userModel.Id.Hex())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "error", "err": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Success"})
+}
+
 type VideoWithOwnerInfoHandler struct {
 	VideoWithOwnerInfoCase usecase.VideoWithOwnerInfoUseCase
 }
@@ -77,7 +124,6 @@ func (vh *VideoWithOwnerInfoHandler) GetVideos(c *gin.Context) {
 	videos, err := vh.VideoWithOwnerInfoCase.GetVideosWithOwnerInfo(c.Request.Context(), pageString, limitString)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, "Something went wrong")
-		fmt.Print("error:", err)
 		return
 	}
 	c.JSON(http.StatusOK, map[string]any{"data": videos})

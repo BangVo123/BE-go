@@ -259,24 +259,24 @@ func (ah *AuthHandler) Reset(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]any{"message:": "Success"})
 }
 
-func (ah *AuthHandler) GetMe(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusForbidden, "User not authenticate")
-		return
-	}
+// func (ah *AuthHandler) GetMe(c *gin.Context) {
+// 	user, exists := c.Get("user")
+// 	if !exists {
+// 		c.JSON(http.StatusForbidden, "User not authenticate")
+// 		return
+// 	}
 
-	foundUser := user.(models.User)
-	c.JSON(http.StatusOK, map[string]any{"data": map[string]any{"user": foundUser}})
-}
+// 	foundUser := user.(models.User)
+// 	c.JSON(http.StatusOK, map[string]any{"data": map[string]any{"user": foundUser}})
+// }
 
-func (ah *AuthHandler) GetUserInfo(c *gin.Context) {
-	userIdString := c.Param("userId")
+// func (ah *AuthHandler) GetUserInfo(c *gin.Context) {
+// 	userIdString := c.Param("userId")
 
-	FoundUser, err := ah.UserCase.GetUserById(c.Request.Context(), userIdString)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, "Something went wrong when get userinfo")
-	}
+// 	FoundUser, err := ah.UserCase.GetUserById(c.Request.Context(), userIdString)
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, "Something went wrong when get userinfo")
+// 	}
 
-	c.JSON(http.StatusOK, map[string]any{"data": FoundUser})
-}
+// 	c.JSON(http.StatusOK, map[string]any{"data": FoundUser})
+// }

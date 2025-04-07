@@ -86,5 +86,5 @@ func (vs *VideoWithOwnerInfoService) GetVideosWithOwnerInfo(ctx context.Context,
 		},
 	}
 
-	return vs.VideoWithOwnerInfoRepo.GetWithPopulation(ctx, pagination, pipelineValue, "$belong_to")
+	return vs.VideoWithOwnerInfoRepo.GetWithPopulation(ctx, pagination, pipelineValue, nil, "$belong_to")
 }

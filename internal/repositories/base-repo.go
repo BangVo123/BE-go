@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -63,6 +64,11 @@ func (r *BaseRepository[T]) GetByFilter(ctx context.Context, filter map[string]a
 	}
 
 	return &result, nil
+}
+
+func (r *BaseRepository[T]) GetDistinct(ctx context.Context, field string, filter map[string]any) ([]any, error) {
+	Collection := r.DB.Collection(r.CollectionName)
+	return Collection.Distinct(ctx, field, filter)
 }
 
 func (r *BaseRepository[T]) Create(ctx context.Context, payload *T) error {
@@ -153,21 +159,27 @@ func (r *BaseRepository[T]) GetAll(ctx context.Context, pagination map[string]in
 	return &entities, nil
 }
 
-func (r *BaseRepository[T]) GetWithPopulation(ctx context.Context, pagination map[string]int64, pipelineValue map[string]any, unwindAttr string) (*[]T, error) {
+func (r *BaseRepository[T]) GetWithPopulation(ctx context.Context, pagination map[string]int64, pipelineValue map[string]any, filter map[string]any, unwindAttr string) (*[]T, error) {
 	Collection := r.DB.Collection(r.CollectionName)
 
 	page := pagination["page"]
 	limit := pagination["limit"]
-	offset := (page - 1) * limit
 
 	pipeline := mongo.Pipeline{
 		{{Key: "$lookup", Value: pipelineValue}},
-		{{Key: "$skip", Value: offset}},
-		{{Key: "$limit", Value: limit}},
+	}
+
+	if filter != nil {
+		pipeline = append(pipeline, bson.D{{Key: "$match", Value: filter}})
 	}
 
 	if unwindAttr != "" {
 		pipeline = append(pipeline, bson.D{{Key: "$unwind", Value: unwindAttr}})
+	}
+
+	if page != 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: (page - 1) * limit}})
+		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: limit}})
 	}
 
 	cursor, err := Collection.Aggregate(ctx, pipeline)
@@ -178,6 +190,7 @@ func (r *BaseRepository[T]) GetWithPopulation(ctx context.Context, pagination ma
 
 	var entities []T
 	if err := cursor.All(ctx, &entities); err != nil {
+		fmt.Print("err", err)
 		return nil, err
 	}
 	return &entities, nil
