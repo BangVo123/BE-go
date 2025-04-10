@@ -7,6 +7,7 @@ import (
 
 type FollowUseCase interface {
 	GetAll(ctx context.Context, userId string) (*[]models.Follower, error)
+	Follow(ctx context.Context, userId, followingId string) error
 }
 
 type FollowerInfoUseCase interface {

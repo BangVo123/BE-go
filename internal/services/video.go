@@ -36,7 +36,27 @@ func (vs *VideoService) GetVideos(ctx context.Context, pageString, limitString s
 	return vs.VideoRepo.GetAll(ctx, pagination)
 }
 
-// ///enter here
+func (vs *VideoService) GetVideosWithFilter(ctx context.Context, pageString, limitString string, filter map[string]any) (*[]models.Video, error) {
+	page, err := strconv.ParseInt(pageString, 10, 64)
+	if err != nil {
+		return nil, errors.New("Something went wrong")
+	}
+	if page == 0 {
+		return vs.VideoRepo.GetMany(ctx, filter, nil)
+	} else {
+		limit, err := strconv.ParseInt(limitString, 10, 64)
+		if err != nil {
+			return nil, errors.New("Something went wrong")
+		}
+
+		pagination := map[string]int64{
+			"page":  page,
+			"limit": limit,
+		}
+		return vs.VideoRepo.GetMany(ctx, filter, pagination)
+	}
+}
+
 func (vs *VideoService) AddVideo(ctx context.Context, payload models.Video) error {
 
 	return vs.VideoRepo.Create(ctx, &payload)

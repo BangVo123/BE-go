@@ -8,6 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type FollowService struct {
@@ -20,6 +21,31 @@ func NewFollowService(FollowRepo *repositories.FollowerRepo) usecase.FollowUseCa
 
 func (fl *FollowService) GetAll(ctx context.Context, userId string) (*[]models.Follower, error) {
 	return fl.FollowRepo.GetAll(ctx, nil)
+}
+
+func (fl *FollowService) Follow(ctx context.Context, userIdString, followingIdString string) error {
+	userId, err := primitive.ObjectIDFromHex(userIdString)
+	if err != nil {
+		return err
+	}
+
+	followingId, err := primitive.ObjectIDFromHex(followingIdString)
+	if err != nil {
+		return err
+	}
+
+	follow, err := fl.FollowRepo.GetByFilter(ctx, map[string]any{"user_id": userId, "following_id": followingId})
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			fl.FollowRepo.Create(ctx, &models.Follower{Id: primitive.NewObjectID(), UserId: userId, FollowingId: followingId})
+		}
+		return err
+	}
+
+	if follow != nil {
+		return fl.FollowRepo.Delete(ctx, follow.Id.Hex())
+	}
+	return nil
 }
 
 type FollowerInfoService struct {

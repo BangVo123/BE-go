@@ -113,3 +113,32 @@ func (uh *UserHandler) GetUserInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, map[string]any{"data": FoundUser})
 }
+
+func (uh *UserHandler) UpdateMe(c *gin.Context) {
+	var payload map[string]any
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON"})
+		return
+	}
+
+	if len(payload) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No data update"})
+		return
+	}
+
+	user, _ := c.Get("user")
+	userObj, ok := user.(models.User)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Something went wrong"})
+		return
+	}
+
+	err := uh.UserCase.UpdateUser(c.Request.Context(), userObj.Id.Hex(), payload)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	c.JSON(http.StatusBadRequest, gin.H{"message": "Success"})
+}

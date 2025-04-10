@@ -34,16 +34,16 @@ func (ls *LikeService) Like(ctx context.Context, videoIdString, userIdString str
 
 	emotion, err := ls.LikeRepo.GetByFilter(ctx, map[string]any{"video_id": videoId, "user_id": userId})
 
-	if err != mongo.ErrNoDocuments {
-		return ls.LikeRepo.Create(ctx, &models.Emotion{Id: primitive.NewObjectID(), UserId: userId, VideoId: videoId})
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return ls.LikeRepo.Create(ctx, &models.Emotion{Id: primitive.NewObjectID(), UserId: userId, VideoId: videoId})
+		} else {
+			return err
+		}
 	}
 
 	if emotion != nil {
 		return ls.LikeRepo.Delete(ctx, emotion.Id.Hex())
-	}
-
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -73,16 +73,16 @@ func (ls *LoveService) Love(ctx context.Context, videoIdString, userIdString str
 
 	emotion, err := ls.LoveRepo.GetByFilter(ctx, map[string]any{"video_id": videoId, "user_id": userId})
 
-	if err != mongo.ErrNoDocuments {
-		return ls.LoveRepo.Create(ctx, &models.Emotion{Id: primitive.NewObjectID(), UserId: userId, VideoId: videoId})
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return ls.LoveRepo.Create(ctx, &models.Emotion{Id: primitive.NewObjectID(), UserId: userId, VideoId: videoId})
+		} else {
+			return err
+		}
 	}
 
 	if emotion != nil {
 		return ls.LoveRepo.Delete(ctx, emotion.Id.Hex())
-	}
-
-	if err != nil {
-		return err
 	}
 
 	return nil

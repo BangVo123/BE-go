@@ -36,6 +36,23 @@ func (vh *VideoHandler) GetVideos(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]any{"data": videos})
 }
 
+func (vh *VideoHandler) GetMyVideos(c *gin.Context) {
+	user, _ := c.Get("user")
+	userObj, ok := user.(models.User)
+	if !ok {
+		c.JSON(http.StatusBadRequest, "Something went wrong when get user info")
+		return
+	}
+
+	videos, err := vh.VideoUseCase.GetVideosWithFilter(c.Request.Context(), "", "", map[string]any{"belong_to": userObj.Id})
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"err": err})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Success", "data": videos})
+}
+
 func (vh *VideoHandler) AddVideo(c *gin.Context) {
 	var AddVideo models.Video
 	if err := c.BindJSON(&AddVideo); err != nil {

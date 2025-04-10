@@ -40,6 +40,7 @@ func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStor
 	VideoHandler := http.NewVideoHandler(VideoService, cld, LikeService, LoveService)
 	VideoWithOwnerInfoHandler := http.NewVideoWithOwnerInfoHandler(VideoWithOwnerInfoService)
 	UploadHandler := http.NewUploadHandler(cld)
+	FollowHandler := http.NewFollowhandler(FollowService)
 
 	mw := middlewares.NewMiddlewareManager(AuthService, s.cfg, s.MongoStore)
 
@@ -48,11 +49,13 @@ func (s *Server) Handler(g *gin.Engine, mongoStore repositories.MongoSessionStor
 	userGroup := v1.Group("/users")
 	videoGroup := v1.Group("/video")
 	uploadGroup := v1.Group("/upload")
+	followGroup := v1.Group("/follow")
 
 	routers.MapAuthRoute(authGroup, AuthHandler, mw)
 	routers.MapUserRoute(userGroup, UserHandler, mw)
 	routers.MapVideoWithOwnerInfoRoute(videoGroup, VideoWithOwnerInfoHandler, mw)
 	routers.MapVideoRoute(videoGroup, VideoHandler, mw)
 	routers.UploadRoute(uploadGroup, UploadHandler, mw)
+	routers.FollowRoute(followGroup, FollowHandler, mw)
 
 }

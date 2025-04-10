@@ -11,5 +11,6 @@ func MapUserRoute(authGroup *gin.RouterGroup, h handlers.UserHandler, mw *middle
 	authGroup.GET("/:userId", h.GetUserInfo)
 	authGroup.Use(mw.Protect)
 	authGroup.GET("", h.GetMe)
+	authGroup.PATCH("", h.UpdateMe)
 
 }
